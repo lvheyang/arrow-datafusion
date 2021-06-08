@@ -22,17 +22,18 @@ use std::any::Any;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
+use arrow::datatypes::SchemaRef;
+use arrow::error::Result as ArrowResult;
+use arrow::record_batch::RecordBatch;
+use async_trait::async_trait;
+use futures::Stream;
+
+use crate::error::{DataFusionError, Result};
+
 use super::{
     DisplayFormatType, ExecutionPlan, Partitioning, RecordBatchStream,
     SendableRecordBatchStream,
 };
-use crate::error::{DataFusionError, Result};
-use arrow::datatypes::SchemaRef;
-use arrow::error::Result as ArrowResult;
-use arrow::record_batch::RecordBatch;
-
-use async_trait::async_trait;
-use futures::Stream;
 
 /// Execution plan for reading in-memory batches of data
 pub struct MemoryExec {

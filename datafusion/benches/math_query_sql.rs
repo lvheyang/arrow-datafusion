@@ -78,6 +78,13 @@ fn create_context(
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
+    let array_len = 6000001; // 2^20
+    let batch_size = 4096; // 2^9
+    let ctx = create_context(array_len, batch_size).unwrap();
+    c.bench_function("add_2_column", |b| {
+        b.iter(|| query(ctx.clone(), "SELECT f32+f64 FROM t"))
+    });
+
     let array_len = 1048576; // 2^20
     let batch_size = 512; // 2^9
     let ctx = create_context(array_len, batch_size).unwrap();

@@ -28,3 +28,6 @@ members = [
 ]
 
 exclude = ["python"]
+
+[profile.release]
+debug = true

@@ -240,7 +240,7 @@ async fn benchmark_datafusion(opt: DataFusionBenchmarkOpt) -> Result<Vec<RecordB
         result = execute_query(&mut ctx, &plan, opt.debug).await?;
         let elapsed = start.elapsed().as_secs_f64() * 1000.0;
         millis.push(elapsed as f64);
-        println!("Query {} iteration {} took {:.1} ms", opt.query, i, elapsed);
+        // println!("Query {} iteration {} took {:.1} ms", opt.query, i, elapsed);
     }
 
     let avg = millis.iter().sum::<f64>() / millis.len() as f64;

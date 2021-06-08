@@ -91,3 +91,7 @@ harness = false
 [[bench]]
 name = "scalar"
 harness = false
+
+[[bench]]
+name = "native_query"
+harness = false
