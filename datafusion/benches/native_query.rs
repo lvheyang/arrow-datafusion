@@ -23,8 +23,7 @@ extern crate datafusion;
 use std::sync::Arc;
 
 use arrow::{
-    // array::{Float32Array, Float64Array},
-    array::{Float64Array},
+    array::Float64Array,
     compute,
     datatypes::{DataType, Field, Schema},
     record_batch::RecordBatch,
@@ -39,7 +38,10 @@ fn query(ctx: Arc<Vec<RecordBatch>>) {
         let col0: &ArrayRef = batch.column(0);
         let col1: &ArrayRef = batch.column(1);
 
-        let _ret = compute::add(col0.as_any().downcast_ref::<Float64Array>().unwrap(), col1.as_any().downcast_ref::<Float64Array>().unwrap()).unwrap();
+        let _ret = compute::add(
+            col0.as_any().downcast_ref::<Float64Array>().unwrap(),
+            col1.as_any().downcast_ref::<Float64Array>().unwrap(),
+        ).unwrap();
     }
 }
 
@@ -74,7 +76,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     let array_len = 6000001; // 2^20
     let batch_size = 4096; // 2^9
     let ctx = create_context(array_len, batch_size).unwrap();
-    c.bench_function("add_2_column_native", |b| b.iter(|| query(ctx.clone())));
+    c.bench_function("add_2_column_arrow", |b| b.iter(|| query(ctx.clone())));
 }
 
 criterion_group!(benches, criterion_benchmark);

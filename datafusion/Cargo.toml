@@ -95,3 +95,7 @@ harness = false
 [[bench]]
 name = "native_query"
 harness = false
+
+[[bench]]
+name = "expression_query"
+harness = false

@@ -20,7 +20,7 @@ extern crate arrow;
 extern crate criterion;
 extern crate datafusion;
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use arrow::{
     array::Float64Array,
@@ -28,24 +28,32 @@ use arrow::{
     record_batch::RecordBatch,
 };
 use criterion::Criterion;
-use tokio::runtime::Runtime;
 
-use datafusion::datasource::MemTable;
-use datafusion::error::Result;
-use datafusion::execution::context::ExecutionContext;
+use datafusion::error::{DataFusionError, Result};
+use datafusion::logical_plan::Operator;
+use datafusion::physical_plan::expressions::{BinaryExpr, col};
+use datafusion::physical_plan::PhysicalExpr;
 
-fn query(ctx: Arc<Mutex<ExecutionContext>>, sql: &str) {
-    let rt = Runtime::new().unwrap();
+fn query(ctx: Arc<Vec<RecordBatch>>) {
+    let expressions = vec![BinaryExpr::new(col("f32"), Operator::Plus, col("f64"))];
 
-    // execute the query
-    let df = ctx.lock().unwrap().sql(&sql).unwrap();
-    rt.block_on(df.collect()).unwrap();
+    for batch in ctx.iter() {
+        let _ret = expressions
+            .iter()
+            .map(|expr| expr.evaluate(&batch))
+            .map(|r| r.map(|v| v.into_array(batch.num_rows())))
+            .collect::<Result<Vec<_>>>()
+            .map_or_else(
+                |e| Err(DataFusionError::into_arrow_external_error(e)),
+                |arrays| RecordBatch::try_new(batch.schema(), arrays),
+            );
+    }
 }
 
 fn create_context(
     array_len: usize,
     batch_size: usize,
-) -> Result<Arc<Mutex<ExecutionContext>>> {
+) -> Result<Arc<Vec<RecordBatch>>> {
     // define a schema.
     let schema = Arc::new(Schema::new(vec![
         Field::new("f32", DataType::Float64, false),
@@ -65,22 +73,14 @@ fn create_context(
         })
         .collect::<Vec<_>>();
 
-    let mut ctx = ExecutionContext::new();
-
-    // declare a table in memory. In spark API, this corresponds to createDataFrame(...).
-    let provider = MemTable::try_new(schema, vec![batches])?;
-    ctx.register_table("t", Arc::new(provider))?;
-
-    Ok(Arc::new(Mutex::new(ctx)))
+    Ok(Arc::new(batches))
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
     let array_len = 6000001; // 2^20
     let batch_size = 4096; // 2^9
     let ctx = create_context(array_len, batch_size).unwrap();
-    c.bench_function("add_2_column_sql", |b| {
-        b.iter(|| query(ctx.clone(), "SELECT f32+f64 FROM t"))
-    });
+    c.bench_function("add_2_column_expr", |b| b.iter(|| query(ctx.clone())));
 }
 
 criterion_group!(benches, criterion_benchmark);
