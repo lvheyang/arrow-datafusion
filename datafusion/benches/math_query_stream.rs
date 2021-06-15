@@ -33,13 +33,18 @@ use tokio::runtime::Runtime;
 use datafusion::datasource::MemTable;
 use datafusion::error::Result;
 use datafusion::execution::context::ExecutionContext;
+use datafusion::physical_plan::collect;
 
 fn query(ctx: Arc<Mutex<ExecutionContext>>, sql: &str) {
     let rt = Runtime::new().unwrap();
 
     // execute the query
     let df = ctx.lock().unwrap().sql(&sql).unwrap();
-    rt.block_on(df.collect()).unwrap();
+
+    let plan = ctx.lock().unwrap().create_logical_plan(&sql).unwrap();
+    let plan = ctx.lock().unwrap().optimize(&plan).unwrap();
+    let plan = ctx.lock().unwrap().create_physical_plan(&plan).unwrap();
+    rt.block_on(collect(plan)).unwrap();
 }
 
 fn create_context(
@@ -61,7 +66,8 @@ fn create_context(
                     Arc::new(Float64Array::from(vec![i as f64; batch_size])),
                     Arc::new(Float64Array::from(vec![i as f64; batch_size])),
                 ],
-            ).unwrap()
+            )
+            .unwrap()
         })
         .collect::<Vec<_>>();
 
