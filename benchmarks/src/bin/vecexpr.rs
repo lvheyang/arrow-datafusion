@@ -5,7 +5,6 @@ use std::time::Instant;
 
 use arrow::array::Float64Array;
 use arrow::compute::kernels::arithmetic;
-use arrow::record_batch::RecordBatch;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
