@@ -28,19 +28,15 @@ use arrow::{
     record_batch::RecordBatch,
 };
 use criterion::Criterion;
-use tokio::runtime::Runtime;
 
 use datafusion::datasource::MemTable;
 use datafusion::error::Result;
 use datafusion::execution::context::ExecutionContext;
 use datafusion::physical_plan::collect;
+use tokio::runtime::Runtime;
 
-fn query(ctx: Arc<Mutex<ExecutionContext>>, sql: &str) {
-    let rt = Runtime::new().unwrap();
-
+fn query(ctx: Arc<Mutex<ExecutionContext>>, sql: &str, rt: Arc<Runtime>) {
     // execute the query
-    let df = ctx.lock().unwrap().sql(&sql).unwrap();
-
     let plan = ctx.lock().unwrap().create_logical_plan(&sql).unwrap();
     let plan = ctx.lock().unwrap().optimize(&plan).unwrap();
     let plan = ctx.lock().unwrap().create_physical_plan(&plan).unwrap();
@@ -84,8 +80,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     let array_len = 6000001; // 2^20
     let batch_size = 4096; // 2^9
     let ctx = create_context(array_len, batch_size).unwrap();
-    c.bench_function("add_2_column_stream", |b| {
-        b.iter(|| query(ctx.clone(), "SELECT f32+f64 FROM t"))
+    let rt = Arc::new(Runtime::new().unwrap());
+    c.bench_function("add_2_column_stream", move |b| {
+        b.iter(|| query(ctx.clone(), "SELECT f32+f64 FROM t", rt.clone()))
     });
 }
 
